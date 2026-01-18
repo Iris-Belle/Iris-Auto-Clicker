@@ -1083,7 +1083,7 @@ public partial class MainWindow : Window
         CoinLabel.Content = "...";
         CoinReady = false;
         await Task.Delay(500);
-        var result = RandomGenerator.Next(1) == 0 ? "Heads" : "Tails";
+        var result = RandomGenerator.Next(2) == 0 ? "Heads" : "Tails";
         CoinLabel.Content = result;
         CoinReady = true;
     }
