@@ -73,7 +73,7 @@
                 </Button>
                 <Label 
                     x:Name="VersionLabel"
-                    Content="IAC4 0.0.1" 
+                    Content="IAC4 0.0.2" 
                     HorizontalAlignment="Right" 
                     VerticalAlignment="Top" 
                     Height="27" 
