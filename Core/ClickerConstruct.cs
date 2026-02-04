@@ -54,7 +54,6 @@ internal class ClickerConstruct
     internal bool HoldMode { get; set; }
     internal bool ToggleMode { get; set; }
     internal bool BurstMode { get; set; }
-
     internal bool IsActive, WasButtonPressed, ShouldStop;
     internal int ThreadId;
     internal bool IsMaxDelayZero => MaxDelay == 0;
@@ -70,7 +69,8 @@ internal class ClickerConstruct
         ushort burstCount,
         bool holdMode,
         bool toggleMode,
-        bool burstMode)
+        bool burstMode
+        )
     {
         ClickerName = clickerName;
         ActivationBind = activationBind;
@@ -130,8 +130,10 @@ internal class ClickerConstruct
     {
         if (isDown && !WasButtonPressed)
         {
-            if (ToggleMode) IsActive = !IsActive;
-            if (BurstMode) PerformBurstClick();
+            if (ToggleMode)
+                IsActive = !IsActive;
+            if (BurstMode)
+                PerformBurstClick();
         }
 
         if (IsActive || (HoldMode && isDown))
@@ -148,24 +150,10 @@ internal class ClickerConstruct
     {
         ActionBind = newBind;
         RecalculateCaches();
-        Action newSendAction;
-
-        if (!LowLevelInput)
-        {
-            newSendAction = ActionBind.IsKey
-                ? () => SendInputs.SendKeyboardInput(this)
-                : () => SendInputs.SendMouseInput(this);
-        }
-        else //hhhhhhhhhhhhhhh
-        {
-            newSendAction = ActionBind.IsKey
-                ? () => InterceptorInputSender.SendKeyboard(this)
-                : () => InterceptorInputSender.SendMouse(this);
-        }
+        Action newSendAction = ActionBind.IsKey ? () => SendInputs.SendKeyboardInput(this) : () => SendInputs.SendMouseInput(this);
 
         _sendInputAction = newSendAction;
     }
-
 
     public void UpdateActivationBind(ClickBind newBind)
     {

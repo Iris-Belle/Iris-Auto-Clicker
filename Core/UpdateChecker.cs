@@ -1,38 +1,39 @@
 ﻿namespace IAC4.Core;
+
 internal class UpdateChecker
 {
     internal static async Task<bool?> CheckForUpdates()
     {
         string currentVersionRaw = string.Empty;
-        var app = Application.Current;
+        Application app = Application.Current;
         if (app?.MainWindow != null)
         {
             app.Dispatcher.Invoke(() =>
             {
-                var mw = app.MainWindow;
-                var label = mw.FindName("VersionLabel");
+                Window mw = app.MainWindow;
+                object label = mw.FindName("VersionLabel");
                 if (label is Label l)
                     currentVersionRaw = l.Content?.ToString() ?? string.Empty;
             });
         }
-        var currentVersion = ParseVersionFromLabel(currentVersionRaw);
+        Version? currentVersion = ParseVersionFromLabel(currentVersionRaw);
         if (currentVersion == null)
             return null;
 
         try
         {
-            using var http = new HttpClient();
+            using HttpClient http = new();
             http.DefaultRequestHeaders.UserAgent.ParseAdd("request");
             http.Timeout = TimeSpan.FromSeconds(10);
 
-            var url = "https://api.github.com/repos/Iris-Belle/Iris-Auto-Clicker/releases";
-            var json = await http.GetStringAsync(url);
-            using var doc = JsonDocument.Parse(json);
-            var firstRelease = doc.RootElement[0];
-            var tag = firstRelease.GetProperty("tag_name").GetString();
+            string url = "https://api.github.com/repos/Iris-Belle/Iris-Auto-Clicker/releases";
+            string json = await http.GetStringAsync(url);
+            using JsonDocument doc = JsonDocument.Parse(json);
+            JsonElement firstRelease = doc.RootElement[0];
+            string? tag = firstRelease.GetProperty("tag_name").GetString();
             if (tag?.StartsWith("v", StringComparison.OrdinalIgnoreCase) == true)
                 tag = tag[1..];
-            return Version.TryParse(tag, out var latest) && latest > currentVersion;
+            return Version.TryParse(tag, out Version? latest) && latest > currentVersion;
         }
         catch (HttpRequestException)
         {
@@ -56,14 +57,14 @@ internal class UpdateChecker
     {
         if (string.IsNullOrWhiteSpace(raw))
             return null;
-        var m = Regex.Match(raw, @"\d+(\.\d+)+");
-        if (m.Success && Version.TryParse(m.Value, out var v))
+        Match m = Regex.Match(raw, @"\d+(\.\d+)+");
+        if (m.Success && Version.TryParse(m.Value, out Version? v))
             return v;
         raw = raw.Trim();
         if (raw.StartsWith("IAC4 ", StringComparison.OrdinalIgnoreCase))
             raw = raw[5..].Trim();
         if (raw.StartsWith("v", StringComparison.OrdinalIgnoreCase))
             raw = raw[1..];
-        return Version.TryParse(raw, out var v2) ? v2 : null;
+        return Version.TryParse(raw, out Version? v2) ? v2 : null;
     }
 }

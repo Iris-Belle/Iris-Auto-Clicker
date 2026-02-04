@@ -1,18 +1,17 @@
 ﻿// many
+global using IAC4.Core;
+global using System.Diagnostics;
 global using System.IO;
 global using System.Net.Http;
 global using System.Runtime.InteropServices;
 global using System.Text;
 global using System.Text.Json;
+global using System.Text.RegularExpressions;
 global using System.Windows;
 global using System.Windows.Controls;
 global using System.Windows.Input;
 global using System.Windows.Media;
 global using System.Windows.Media.Animation;
-global using System.Text.RegularExpressions;
-global using System.Diagnostics;
-global using InputInterceptorNS;
-global using IAC4.Core;
 global using static IAC4.Core.ClickerManager;
 global using static IAC4.Core.GoogleDoc;
 global using static IAC4.Core.UpdateChecker;

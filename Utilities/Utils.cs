@@ -1,4 +1,5 @@
 ﻿namespace IAC4.Utilities;
+
 internal class Utils
 {
     internal static readonly Random RandomGenerator = new();
@@ -8,7 +9,6 @@ internal class Utils
         CoinReady = true,
         AllowUpdates = false,
         UseCustomTitles = false,
-        LowLevelInput = false,
         Replacing = false,
         NameExists = false,
         TextNull = false,
@@ -16,8 +16,6 @@ internal class Utils
         SavePressed = false,
         LoadPressed = false,
         ResetPressed = false,
-        InstallDriverPressed = false,
-        UninstallDriverPressed = false,
         DiscardChangesPressed = false,
         SaveChangesPressed = false,
         SaveUnsavedChangesPressed = false,
@@ -35,10 +33,11 @@ internal class Utils
     {
         if (Application.Current.MainWindow is MainWindow mainWindow)
         {
-            var textBox = mainWindow.LogOutputTx;
-            if (textBox == null) return;
+            TextBox textBox = mainWindow.LogOutputTx;
+            if (textBox == null)
+                return;
 
-            var scrollViewer = GetScrollViewer(textBox);
+            ScrollViewer? scrollViewer = GetScrollViewer(textBox);
             bool isAtBottom = scrollViewer != null && scrollViewer.VerticalOffset >= scrollViewer.ScrollableHeight - 1;
             textBox.AppendText($"[{DateTime.Now:HH:mm:ss:fff}] {message}\n");
             if (isAtBottom)
@@ -47,17 +46,14 @@ internal class Utils
             }
         }
     });
-    internal static bool ClickBindEquals(ClickBind a, ClickBind b)
-    {
-        return a.IsKey == b.IsKey &&
+    internal static bool ClickBindEquals(ClickBind a, ClickBind b) => a.IsKey == b.IsKey &&
                a.Key == b.Key &&
                a.Mouse == b.Mouse;
-    }
 
     internal static void UpdateProfiles()
     {
-        var clickers = GetAllKlikers().ToArray();
-        foreach (var clicker in clickers)
+        ClickerConstruct[] clickers = GetAllKlikers().ToArray();
+        foreach (ClickerConstruct? clicker in clickers)
         {
             clicker.UpdateActionBind(clicker.ActionBind);
             clicker.UpdateActivationBind(clicker.ActivationBind);
@@ -68,11 +64,11 @@ internal class Utils
     {
         for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
         {
-            var child = VisualTreeHelper.GetChild(parent, i);
+            DependencyObject child = VisualTreeHelper.GetChild(parent, i);
             if (child is ScrollViewer viewer)
                 return viewer;
 
-            var result = GetScrollViewer(child);
+            ScrollViewer? result = GetScrollViewer(child);
             if (result != null)
                 return result;
         }

@@ -23,8 +23,4 @@
 	  </AvaloniaXaml>
 	</ItemGroup>
 
-	<ItemGroup>
-	  <PackageReference Include="InputInterceptor" Version="2.2.1" />
-	</ItemGroup>
-
 </Project>

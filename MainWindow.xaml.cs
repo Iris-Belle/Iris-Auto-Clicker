@@ -22,31 +22,31 @@ public partial class MainWindow : Window
         InitializeComponent();
         LoadSettings();
         _ = timeBeginPeriod(1);
+        DisablePowerThrottling();
         activePanel = MainPanel;
 
         InnerBorder.SizeChanged += (s, e) =>
         {
-            var rect = new Rect(0, 0, InnerBorder.ActualWidth, InnerBorder.ActualHeight);
+            Rect rect = new(0, 0, InnerBorder.ActualWidth, InnerBorder.ActualHeight);
             InnerBorder.Clip = new RectangleGeometry(rect, 8, 8);
         };
         Bind.PreviewKeyDown += SetKeyBinding;
         BindClick.PreviewKeyDown += SetKeyPressBinding;
         Bind.PreviewMouseDown += SetMouseBinding;
         BindClick.PreviewMouseDown += SetMouseClickBinding;
-        LowLevelInputCheckBorder.BorderThickness = LowLevelInput ? new Thickness(2, 2, 4, 4) : new Thickness(1, 1, 8, 8);
-        AllowUpdateCheckingCheckBorder.BorderThickness = AllowUpdates ? new Thickness(2, 2, 4, 4) : new Thickness(1, 1, 8, 8);
-        UseCustomTitlesCheckBorder.BorderThickness = UseCustomTitles ? new Thickness(2, 2, 4, 4) : new Thickness(1, 1, 8, 8);
+        AllowUpdateCheckingCheckBorder.BorderThickness = AllowUpdates ? new Thickness(2, 2, 4, 3) : new Thickness(1, 1, 7, 6);
+        UseCustomTitlesCheckBorder.BorderThickness = UseCustomTitles ? new Thickness(2, 2, 4, 3) : new Thickness(1, 1, 7, 6);
 
         Loaded += MainWindow_Loaded;
     }
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         if (UseCustomTitles)
-        await GetTitleAsync();
+            await GetTitleAsync();
 
         if (AllowUpdates)
         {
-            var updateResult = await CheckForUpdates();
+            bool? updateResult = await CheckForUpdates();
 
             if (updateResult == true)
             {
@@ -69,7 +69,6 @@ public partial class MainWindow : Window
     {
         var snapshot = new
         {
-            LowLevelInput,
             AllowUpdates,
             UseCustomTitles,
             Klikers = GetAllKlikers().ToDictionary(
@@ -94,13 +93,13 @@ public partial class MainWindow : Window
 
         JsonSerializerOptions jsonSerializerOptions = new() { WriteIndented = true };
         JsonSerializerOptions opts = jsonSerializerOptions;
-        var json = JsonSerializer.Serialize(snapshot, opts);
+        string json = JsonSerializer.Serialize(snapshot, opts);
         File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SettingsFileName), json);
         SendLogMessage($"State saved to {SettingsFileName}");
     }
     internal void LoadSettings()
     {
-        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SettingsFileName);
+        string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SettingsFileName);
         if (!File.Exists(path))
         {
             SendLogMessage("no state file found(HAIIII thank for usuinng me or smth and uhhh if u arent new here uhmmm uhhhh) using defaults or wtv");
@@ -109,30 +108,15 @@ public partial class MainWindow : Window
 
         try
         {
-            using var doc = JsonDocument.Parse(File.ReadAllText(path));
-            var root = doc.RootElement;
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
+            JsonElement root = doc.RootElement;
 
-            if (root.TryGetProperty("LowLevelInput", out var lowLevelProp))
-            {
-                try
-                {
-                    LowLevelInput = lowLevelProp.GetBoolean();
-                    LowLevelInputCheckBorder.BorderThickness = LowLevelInput ? new Thickness(2, 2, 4, 4) : new Thickness(1, 1, 8, 8);
-                    foreach (var clicker in GetAllKlikers().ToArray())
-                        clicker.UpdateActionBind(clicker.ActionBind);
-                }
-                catch (Exception ex)
-                {
-                    SendLogMessage($"no work to read LowLevelInput: {ex.Message}"); //:supershock:
-                }
-            }
-
-            if (root.TryGetProperty("AllowUpdates", out var updatecheckprop))
+            if (root.TryGetProperty("AllowUpdates", out JsonElement updatecheckprop))
             {
                 try
                 {
                     AllowUpdates = updatecheckprop.GetBoolean();
-                    AllowUpdateCheckingCheckBorder.BorderThickness = AllowUpdates ? new Thickness(2, 2, 4, 4) : new Thickness(1, 1, 8, 8);
+                    AllowUpdateCheckingCheckBorder.BorderThickness = AllowUpdates ? new Thickness(2, 2, 4, 3) : new Thickness(1, 1, 7, 6);
                 }
                 catch (Exception ex)
                 {
@@ -140,12 +124,12 @@ public partial class MainWindow : Window
                 }
             }
 
-            if (root.TryGetProperty("UseCustomTitles", out var customtitleprop))
+            if (root.TryGetProperty("UseCustomTitles", out JsonElement customtitleprop))
             {
                 try
                 {
                     UseCustomTitles = customtitleprop.GetBoolean();
-                    UseCustomTitlesCheckBorder.BorderThickness = UseCustomTitles ? new Thickness(2, 2, 4, 4) : new Thickness(1, 1, 8, 8);
+                    UseCustomTitlesCheckBorder.BorderThickness = UseCustomTitles ? new Thickness(2, 2, 4, 3) : new Thickness(1, 1, 7, 6);
                 }
                 catch (Exception ex)
                 {
@@ -157,10 +141,10 @@ public partial class MainWindow : Window
             ProfilesPanel.Children.Clear();
             _nextProfileIndex = 0;
 
-            foreach (var prop in root.GetProperty("Klikers").EnumerateObject())
+            foreach (JsonProperty prop in root.GetProperty("Klikers").EnumerateObject())
             {
-                var name = prop.Name;
-                var data = prop.Value;
+                string name = prop.Name;
+                JsonElement data = prop.Value;
 
                 try
                 {
@@ -181,14 +165,14 @@ public partial class MainWindow : Window
                         ? new ClickBind { Mouse = Enum.Parse<MouseButton>(act2MouseStr) }
                         : throw new InvalidOperationException("Neither ActionKey nor ActionMouse present.");
 
-                    var hold = (ushort)data.GetProperty("HoldDuration").GetUInt32();
-                    var delay = (ushort)data.GetProperty("Delay").GetUInt32();
-                    var maxDelay = (ushort)data.GetProperty("MaxDelay").GetUInt32();
-                    var burstCount = (ushort)data.GetProperty("BurstCount").GetUInt32();
-                    var holdMode = data.GetProperty("HoldMode").GetBoolean();
-                    var toggleMode = data.GetProperty("ToggleMode").GetBoolean();
-                    var burstMode = data.GetProperty("BurstMode").GetBoolean();
-                    var shouldSpam = data.GetProperty("ShouldSpam").GetBoolean();
+                    ushort hold = (ushort)data.GetProperty("HoldDuration").GetUInt32();
+                    ushort delay = (ushort)data.GetProperty("Delay").GetUInt32();
+                    ushort maxDelay = (ushort)data.GetProperty("MaxDelay").GetUInt32();
+                    ushort burstCount = (ushort)data.GetProperty("BurstCount").GetUInt32();
+                    bool holdMode = data.GetProperty("HoldMode").GetBoolean();
+                    bool toggleMode = data.GetProperty("ToggleMode").GetBoolean();
+                    bool burstMode = data.GetProperty("BurstMode").GetBoolean();
+                    bool shouldSpam = data.GetProperty("ShouldSpam").GetBoolean();
 
                     LoadProfileUI(name, activation, action, hold, delay, maxDelay, burstCount, holdMode, toggleMode, burstMode, shouldSpam);
                 }
@@ -209,10 +193,8 @@ public partial class MainWindow : Window
     {
         ResetPressed = true;
         _ = ButtonAnimator();
-        LowLevelInput = false;
         AllowUpdates = false;
         UseCustomTitles = false;
-        LowLevelInputCheckBorder.BorderThickness = new Thickness(1, 1, 8, 8);
         AllowUpdateCheckingCheckBorder.BorderThickness = new Thickness(1, 1, 8, 8);
         UseCustomTitlesCheckBorder.BorderThickness = new Thickness(1, 1, 8, 8);
         UpdateProfiles();
@@ -221,20 +203,26 @@ public partial class MainWindow : Window
     }
     internal void ToSettingsPanel(object sender, RoutedEventArgs e)
     {
-        if (!TransitionDone) return;
-        if (activePanel == SettingsPanel) return;
+        if (!TransitionDone)
+            return;
+        if (activePanel == SettingsPanel)
+            return;
         SlidePanel(activePanel, SettingsPanel, -1, false);
     }
     internal void ToProfilePanel(object sender, RoutedEventArgs e)
     {
-        if (!TransitionDone) return;
-        if (activePanel == ProfilePanel) return;
+        if (!TransitionDone)
+            return;
+        if (activePanel == ProfilePanel)
+            return;
         SlidePanel(activePanel, ProfilePanel, 1, false);
     }
     internal void ToKlikerPanelY(object sender, RoutedEventArgs e)
     {
-        if (!TransitionDone) return;
-        if (activePanel == KlikerPanel) return;
+        if (!TransitionDone)
+            return;
+        if (activePanel == KlikerPanel)
+            return;
         if (HasUnsavedChanges())
         {
             UnsavedChangesBorder.Visibility = Visibility.Visible;
@@ -244,57 +232,60 @@ public partial class MainWindow : Window
     }
     internal void ToLogPanelY(object sender, RoutedEventArgs e)
     {
-        if (!TransitionDone) return;
-        if (activePanel == LogPanel) return;
+        if (!TransitionDone)
+            return;
+        if (activePanel == LogPanel)
+            return;
         SlidePanel(activePanel, LogPanel, 1, false);
     }
     internal void ToKlikerPanel(object sender, RoutedEventArgs e)
     {
-        if (!TransitionDone) return;
-        if (activePanel == KlikerPanel) return;
+        if (!TransitionDone)
+            return;
+        if (activePanel == KlikerPanel)
+            return;
         SlidePanel(activePanel, KlikerPanel, 1, true);
     }
     internal void ToLogPanel(object sender, RoutedEventArgs e)
     {
-        if (!TransitionDone) return;
-        if (activePanel == LogPanel) return;
+        if (!TransitionDone)
+            return;
+        if (activePanel == LogPanel)
+            return;
         SlidePanel(activePanel, LogPanel, -1, true);
     }
     internal void ToMainPanel(object sender, RoutedEventArgs e)
     {
-        if (!TransitionDone) return;
-        if (activePanel == MainPanel) return;
-        var dir = activePanel == KlikerPanel ? -1 : 1;
+        if (!TransitionDone)
+            return;
+        if (activePanel == MainPanel)
+            return;
+        int dir = activePanel == KlikerPanel ? -1 : 1;
         SlidePanel(activePanel, MainPanel, dir, true);
     }
-    internal void SlidePanelX(Grid from, Grid to, double direction)
-    {
-        SlidePanel(from, to, direction, true);
-    }
-    internal void SlidePanelY(Grid from, Grid to, double direction)
-    {
-        SlidePanel(from, to, direction, false);
-    }
+    internal void SlidePanelX(Grid from, Grid to, double direction) => SlidePanel(from, to, direction, true);
+    internal void SlidePanelY(Grid from, Grid to, double direction) => SlidePanel(from, to, direction, false);
     internal void SlidePanel(Grid from, Grid to, double direction, bool isHorizontal)
     {
         TransitionDone = false;
         double offset = isHorizontal ? LayoutRoot.ActualWidth : LayoutRoot.ActualHeight;
         string property = isHorizontal ? "X" : "Y";
         to.Visibility = Visibility.Visible;
-        var ttTo = (TranslateTransform)to.RenderTransform;
+        TranslateTransform ttTo = (TranslateTransform)to.RenderTransform;
         if (isHorizontal)
             ttTo.X = direction * offset;
         else
             ttTo.Y = direction * offset;
-        var duration = new Duration(TimeSpan.FromMilliseconds(500));
-        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var sb = new Storyboard();
-        var animOut = new DoubleAnimation(0, -direction * offset, duration) { EasingFunction = easing };
+        Duration duration = new(TimeSpan.FromMilliseconds(500));
+        CubicEase easing = new()
+        { EasingMode = EasingMode.EaseOut };
+        Storyboard sb = new();
+        DoubleAnimation animOut = new(0, -direction * offset, duration) { EasingFunction = easing };
         Storyboard.SetTarget(animOut, from);
         Storyboard.SetTargetProperty(animOut,
             new PropertyPath($"(UIElement.RenderTransform).(TranslateTransform.{property})"));
         sb.Children.Add(animOut);
-        var animIn = new DoubleAnimation(direction * offset, 0, duration) { EasingFunction = easing };
+        DoubleAnimation animIn = new(direction * offset, 0, duration) { EasingFunction = easing };
         Storyboard.SetTarget(animIn, to);
         Storyboard.SetTargetProperty(animIn,
             new PropertyPath($"(UIElement.RenderTransform).(TranslateTransform.{property})"));
@@ -303,7 +294,7 @@ public partial class MainWindow : Window
         sb.Completed += (s, ev) =>
         {
             from.Visibility = Visibility.Collapsed;
-            var ttFrom = (TranslateTransform)from.RenderTransform;
+            TranslateTransform ttFrom = (TranslateTransform)from.RenderTransform;
             ttTo = (TranslateTransform)to.RenderTransform;
 
             if (isHorizontal)
@@ -354,7 +345,7 @@ public partial class MainWindow : Window
     private void StartListening(string bindType)
     {
         isListening = true;
-        var window = GetWindow(this);
+        Window window = GetWindow(this);
 
         if (window.Content is Panel rootGrid)
         {
@@ -375,25 +366,27 @@ public partial class MainWindow : Window
             Grid.SetRowSpan(overlayBorder, 100);
             Grid.SetColumnSpan(overlayBorder, 100);
             Panel.SetZIndex(overlayBorder, 9999);
-            rootGrid.Children.Add(overlayBorder);
+            _ = rootGrid.Children.Add(overlayBorder);
 
             overlayBorder.PreviewKeyDown += OverlayKeyHandler;
             overlayBorder.PreviewMouseDown += OverlayMouseHandler;
             overlayBorder.Focusable = true;
-            overlayBorder.Focus();
+            _ = overlayBorder.Focus();
         }
     }
     private void OverlayKeyHandler(object sender, KeyEventArgs e)
     {
-        if (!isListening) return;
-        var key = (e.Key == Key.System) ? e.SystemKey : e.Key;
+        if (!isListening)
+            return;
+        Key key = (e.Key == Key.System) ? e.SystemKey : e.Key;
         if (key == Key.Escape)
         {
             CancelListening();
             e.Handled = true;
             return;
         }
-        var bind = new ClickBind { Key = key };
+        ClickBind bind = new()
+        { Key = key };
         if (isActivationBind)
         {
             Temp_ActivationBind = bind;
@@ -411,8 +404,10 @@ public partial class MainWindow : Window
     }
     private void OverlayMouseHandler(object sender, MouseButtonEventArgs e)
     {
-        if (!isListening) return;
-        var bind = new ClickBind { Mouse = e.ChangedButton };
+        if (!isListening)
+            return;
+        ClickBind bind = new()
+        { Mouse = e.ChangedButton };
         if (isActivationBind)
         {
             Temp_ActivationBind = bind;
@@ -443,7 +438,7 @@ public partial class MainWindow : Window
 
         if (overlayBorder != null)
         {
-            var window = GetWindow(this);
+            Window window = GetWindow(this);
 
             if (window?.Content is Panel rootGrid && rootGrid.Children.Contains(overlayBorder))
             {
@@ -480,7 +475,7 @@ public partial class MainWindow : Window
         _ = ButtonAnimator();
         if (string.IsNullOrEmpty(_currentlyEditing))
             return;
-        var newName = NProfileNameTextBox.Text.Trim();
+        string newName = NProfileNameTextBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(newName))
         {
             return;
@@ -495,25 +490,25 @@ public partial class MainWindow : Window
         ClickBind activation = Temp_ActivationBind;
         ClickBind action = Temp_ActionBind;
 
-        if (!(ushort.TryParse(NHoldDurTextBox.Text, out var holdDur) &&
-              ushort.TryParse(NdelayTextBox.Text, out var delay) &&
-              ushort.TryParse(NMaxDelayTextBox.Text, out var maxDelay)))
+        if (!(ushort.TryParse(NHoldDurTextBox.Text, out ushort holdDur) &&
+              ushort.TryParse(NdelayTextBox.Text, out ushort delay) &&
+              ushort.TryParse(NMaxDelayTextBox.Text, out ushort maxDelay)))
         {
             return;
         }
 
-        if (!ushort.TryParse(NBurstCountTextBox.Text, out var burstCount))
+        if (!ushort.TryParse(NBurstCountTextBox.Text, out ushort burstCount))
         {
             return;
         }
 
-        var holdMode = HTC.IsChecked == true;
-        var toggleMode = TTC.IsChecked == true;
-        var burstMode = PTB.IsChecked == true;
+        bool holdMode = HTC.IsChecked == true;
+        bool toggleMode = TTC.IsChecked == true;
+        bool burstMode = PTB.IsChecked == true;
 
         if (!newName.Equals(_currentlyEditing, StringComparison.OrdinalIgnoreCase))
         {
-            var btn = ProfilesPanel.Children
+            Button? btn = ProfilesPanel.Children
                 .OfType<Panel>()
                 .SelectMany(p => p.Children.OfType<Button>())
                 .FirstOrDefault(b =>
@@ -564,7 +559,7 @@ public partial class MainWindow : Window
                 return;
             }
         }
-        var existing = GetKliker(_currentlyEditing);
+        ClickerConstruct? existing = GetKliker(_currentlyEditing);
         DebugNameLabel.Content = $"Name: {newName}";
         if (existing != null)
         {
@@ -585,40 +580,43 @@ public partial class MainWindow : Window
     }
     private void PTBChecked(object sender, RoutedEventArgs e)
     {
-        if (PTB.IsChecked == null) return;
+        if (PTB.IsChecked == null)
+            return;
 
-        BurstModeCheckBorder.BorderThickness = (bool)PTB.IsChecked ? new Thickness(1, 1, 2, 2) : new Thickness(1, 1, 4, 4);
+        BurstModeCheckBorder.BorderThickness = (bool)PTB.IsChecked ? new Thickness(1, 1, 2, 1) : new Thickness(1, 1, 4, 3);
 
         TTC.IsChecked = false;
-        ToggleModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 4);
+        ToggleModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 3);
         HTC.IsChecked = false;
-        HoldModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 4);
+        HoldModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 3);
     }
     private void TTCChecked(object sender, RoutedEventArgs e)
     {
-        if (TTC.IsChecked == null) return;
+        if (TTC.IsChecked == null)
+            return;
 
-        ToggleModeCheckBorder.BorderThickness = (bool)TTC.IsChecked ? new Thickness(1, 1, 2, 2) : new Thickness(1, 1, 4, 4);
+        ToggleModeCheckBorder.BorderThickness = (bool)TTC.IsChecked ? new Thickness(1, 1, 2, 1) : new Thickness(1, 1, 4, 3);
 
         PTB.IsChecked = false;
-        BurstModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 4);
+        BurstModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 3);
         HTC.IsChecked = false;
-        HoldModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 4);
+        HoldModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 3);
     }
     private void HTCChecked(object sender, RoutedEventArgs e)
     {
-        if (HTC.IsChecked == null) return;
+        if (HTC.IsChecked == null)
+            return;
 
-        HoldModeCheckBorder.BorderThickness = (bool)HTC.IsChecked ? new Thickness(1, 1, 2, 2) : new Thickness(1, 1, 4, 4);
+        HoldModeCheckBorder.BorderThickness = (bool)HTC.IsChecked ? new Thickness(1, 1, 2, 1) : new Thickness(1, 1, 4, 3);
 
         TTC.IsChecked = false;
-        ToggleModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 4);
+        ToggleModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 3);
         PTB.IsChecked = false;
-        BurstModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 4);
+        BurstModeCheckBorder.BorderThickness = new Thickness(1, 1, 4, 3);
     }
     private void ProfileNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        var name = ProfileNameTextBox2.Text.Trim();
+        string name = ProfileNameTextBox2.Text.Trim();
 
         bool hasText = !string.IsNullOrWhiteSpace(name);
         bool alreadyExists = ProfilesPanel.Children.OfType<Button>().Any(b => b.Content is string content && content.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -634,17 +632,19 @@ public partial class MainWindow : Window
     {
         AddProfilePressed = true;
         _ = ButtonAnimator();
-        var name = ProfileNameTextBox2.Text.Trim();
-        if (string.IsNullOrEmpty(name)) return;
+        string name = ProfileNameTextBox2.Text.Trim();
+        if (string.IsNullOrEmpty(name))
+            return;
 
         bool alreadyExists =
             ProfilesPanel.Children.OfType<Button>().Any(b => string.Equals(b.Content?.ToString(), name, StringComparison.OrdinalIgnoreCase))
             || ProfilesPanel.Children.OfType<Grid>().SelectMany(g => g.Children.OfType<Button>()).Any(b => string.Equals(b.Content?.ToString(), name, StringComparison.OrdinalIgnoreCase))
             || ProfilesPanel.Children.OfType<StackPanel>().SelectMany(sp => sp.Children.OfType<Button>()).Any(b => string.Equals(b.Content?.ToString(), name, StringComparison.OrdinalIgnoreCase));
 
-        if (alreadyExists) return;
+        if (alreadyExists)
+            return;
 
-        var grid = new Grid
+        Grid grid = new()
         {
             Margin = new Thickness(0, 0, 0, 5),
             HorizontalAlignment = HorizontalAlignment.Stretch
@@ -652,113 +652,7 @@ public partial class MainWindow : Window
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        var delBtn = new Button
-        {
-            Content = "X",
-            Width = 30,
-            Height = 40,
-            Margin = new Thickness(0, 0, 0, 0),
-            Cursor = Cursors.Hand,
-            FontWeight = FontWeights.Bold,
-            Background = new SolidColorBrush(Color.FromRgb(238, 46, 42)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(50, 46, 49)),
-            Foreground = Brushes.White,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Center,
-            BorderThickness = new Thickness(1,1,1,4),
-            Padding = new Thickness(0)
-        };
-        Grid.SetColumn(delBtn, 0);
-        var delTemplate = new ControlTemplate(typeof(Button));
-        var delBorderFactory = new FrameworkElementFactory(typeof(Border));
-        delBorderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(5, 0, 0, 5));
-        delBorderFactory.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(BackgroundProperty));
-        delBorderFactory.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(BorderBrushProperty));
-        delBorderFactory.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(BorderThicknessProperty));
-        var delContentFactory = new FrameworkElementFactory(typeof(ContentPresenter));
-        delContentFactory.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
-        delContentFactory.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
-        delBorderFactory.AppendChild(delContentFactory);
-        delTemplate.VisualTree = delBorderFactory;
-        delBtn.Template = delTemplate;
-
-        var btn = new Button
-        {
-            Content = name,
-            Cursor = Cursors.Hand,
-            Width = double.NaN,
-            Height = 40,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            FontFamily = new FontFamily("Consolas"),
-            FontSize = 16,
-            Opacity = 1,
-            FontWeight = FontWeights.Bold,
-            Background = new SolidColorBrush(Color.FromRgb(198, 195, 171)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(50, 46, 49)),
-            Foreground = Brushes.Black,
-            BorderThickness = new Thickness(0,1,4,4),
-            Padding = new Thickness(0)
-        };
-        Grid.SetColumn(btn, 1);
-
-        var profileTemplate = new ControlTemplate(typeof(Button));
-        var profBorderFactory = new FrameworkElementFactory(typeof(Border));
-        profBorderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(0, 5, 5, 0));
-        profBorderFactory.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(BackgroundProperty));
-        profBorderFactory.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(BorderBrushProperty));
-        profBorderFactory.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(BorderThicknessProperty));
-        var profContentFactory = new FrameworkElementFactory(typeof(ContentPresenter));
-        profContentFactory.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
-        profContentFactory.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
-        profBorderFactory.AppendChild(profContentFactory);
-        profileTemplate.VisualTree = profBorderFactory;
-        btn.Template = profileTemplate;
-
-        btn.Click += ProfileButton;
-
-        delBtn.Click += (s, args) =>
-        {
-            DeleteKliker(name);
-            ProfilesPanel.Children.Remove(grid);
-        };
-
-        grid.Children.Add(delBtn);
-        grid.Children.Add(btn);
-        ProfilesPanel.Children.Add(grid);
-
-        var defaultActivation = new ClickBind { Key = Key.F1 };
-        var defaultAction = new ClickBind { Mouse = MouseButton.Left };
-
-        CreateKliker(
-            name,
-            defaultActivation,
-            defaultAction,
-            holdDuration: 0,
-            delay: 0,
-            maxDelay: 0,
-            burstCount: 0,
-            holdMode: true,
-            toggleMode: false,
-            burstMode: false,
-            shouldSpam: true
-        );
-
-        ProfileNameTextBox2.Text = "";
-        UpdateProfiles();
-    }
-    private void LoadProfileUI(string name, ClickBind activation, ClickBind action, ushort holdDuration, ushort delay, ushort maxDelay, ushort burstCount, bool holdMode, bool toggleMode, bool burstMode, bool shouldSpam)
-    {
-        var grid = new Grid
-        {
-            Margin = new Thickness(0, 0, 0, 5),
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        var delBtn = new Button
+        Button delBtn = new()
         {
             Content = "X",
             Width = 30,
@@ -775,21 +669,20 @@ public partial class MainWindow : Window
             Padding = new Thickness(0)
         };
         Grid.SetColumn(delBtn, 0);
-
-        var delTemplate = new ControlTemplate(typeof(Button));
-        var delBorderFactory = new FrameworkElementFactory(typeof(Border));
+        ControlTemplate delTemplate = new(typeof(Button));
+        FrameworkElementFactory delBorderFactory = new(typeof(Border));
         delBorderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(5, 0, 0, 5));
         delBorderFactory.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(BackgroundProperty));
         delBorderFactory.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(BorderBrushProperty));
         delBorderFactory.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(BorderThicknessProperty));
-        var delContentFactory = new FrameworkElementFactory(typeof(ContentPresenter));
+        FrameworkElementFactory delContentFactory = new(typeof(ContentPresenter));
         delContentFactory.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
         delContentFactory.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
         delBorderFactory.AppendChild(delContentFactory);
         delTemplate.VisualTree = delBorderFactory;
         delBtn.Template = delTemplate;
 
-        var btn = new Button
+        Button btn = new()
         {
             Content = name,
             Cursor = Cursors.Hand,
@@ -810,13 +703,13 @@ public partial class MainWindow : Window
         };
         Grid.SetColumn(btn, 1);
 
-        var profileTemplate = new ControlTemplate(typeof(Button));
-        var profBorderFactory = new FrameworkElementFactory(typeof(Border));
+        ControlTemplate profileTemplate = new(typeof(Button));
+        FrameworkElementFactory profBorderFactory = new(typeof(Border));
         profBorderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(0, 5, 5, 0));
         profBorderFactory.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(BackgroundProperty));
         profBorderFactory.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(BorderBrushProperty));
         profBorderFactory.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(BorderThicknessProperty));
-        var profContentFactory = new FrameworkElementFactory(typeof(ContentPresenter));
+        FrameworkElementFactory profContentFactory = new(typeof(ContentPresenter));
         profContentFactory.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
         profContentFactory.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
         profBorderFactory.AppendChild(profContentFactory);
@@ -831,9 +724,118 @@ public partial class MainWindow : Window
             ProfilesPanel.Children.Remove(grid);
         };
 
-        grid.Children.Add(delBtn);
-        grid.Children.Add(btn);
-        ProfilesPanel.Children.Add(grid);
+        _ = grid.Children.Add(delBtn);
+        _ = grid.Children.Add(btn);
+        _ = ProfilesPanel.Children.Add(grid);
+
+        ClickBind defaultActivation = new()
+        { Key = Key.F1 };
+        ClickBind defaultAction = new()
+        { Mouse = MouseButton.Left };
+
+        CreateKliker(
+            name,
+            defaultActivation,
+            defaultAction,
+            holdDuration: 0,
+            delay: 0,
+            maxDelay: 0,
+            burstCount: 0,
+            holdMode: true,
+            toggleMode: false,
+            burstMode: false,
+            shouldSpam: true
+        );
+
+        ProfileNameTextBox2.Text = "";
+        UpdateProfiles();
+    }
+    private void LoadProfileUI(string name, ClickBind activation, ClickBind action, ushort holdDuration, ushort delay, ushort maxDelay, ushort burstCount, bool holdMode, bool toggleMode, bool burstMode, bool shouldSpam)
+    {
+        Grid grid = new()
+        {
+            Margin = new Thickness(0, 0, 0, 5),
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        Button delBtn = new()
+        {
+            Content = "X",
+            Width = 30,
+            Height = 40,
+            Margin = new Thickness(0, 0, 0, 0),
+            Cursor = Cursors.Hand,
+            FontWeight = FontWeights.Bold,
+            Background = new SolidColorBrush(Color.FromRgb(238, 46, 42)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(50, 46, 49)),
+            Foreground = Brushes.White,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Center,
+            BorderThickness = new Thickness(1, 1, 1, 4),
+            Padding = new Thickness(0)
+        };
+        Grid.SetColumn(delBtn, 0);
+
+        ControlTemplate delTemplate = new(typeof(Button));
+        FrameworkElementFactory delBorderFactory = new(typeof(Border));
+        delBorderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(5, 0, 0, 5));
+        delBorderFactory.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(BackgroundProperty));
+        delBorderFactory.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(BorderBrushProperty));
+        delBorderFactory.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(BorderThicknessProperty));
+        FrameworkElementFactory delContentFactory = new(typeof(ContentPresenter));
+        delContentFactory.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        delContentFactory.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
+        delBorderFactory.AppendChild(delContentFactory);
+        delTemplate.VisualTree = delBorderFactory;
+        delBtn.Template = delTemplate;
+
+        Button btn = new()
+        {
+            Content = name,
+            Cursor = Cursors.Hand,
+            Width = double.NaN,
+            Height = 40,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 16,
+            Opacity = 1,
+            FontWeight = FontWeights.Bold,
+            Background = new SolidColorBrush(Color.FromRgb(198, 195, 171)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(50, 46, 49)),
+            Foreground = Brushes.Black,
+            BorderThickness = new Thickness(0, 1, 4, 4),
+            Padding = new Thickness(0)
+        };
+        Grid.SetColumn(btn, 1);
+
+        ControlTemplate profileTemplate = new(typeof(Button));
+        FrameworkElementFactory profBorderFactory = new(typeof(Border));
+        profBorderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(0, 5, 5, 0));
+        profBorderFactory.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(BackgroundProperty));
+        profBorderFactory.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(BorderBrushProperty));
+        profBorderFactory.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(BorderThicknessProperty));
+        FrameworkElementFactory profContentFactory = new(typeof(ContentPresenter));
+        profContentFactory.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        profContentFactory.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
+        profBorderFactory.AppendChild(profContentFactory);
+        profileTemplate.VisualTree = profBorderFactory;
+        btn.Template = profileTemplate;
+
+        btn.Click += ProfileButton;
+
+        delBtn.Click += (s, args) =>
+        {
+            DeleteKliker(name);
+            ProfilesPanel.Children.Remove(grid);
+        };
+
+        _ = grid.Children.Add(delBtn);
+        _ = grid.Children.Add(btn);
+        _ = ProfilesPanel.Children.Add(grid);
 
         CreateKliker(
             name,
@@ -853,11 +855,11 @@ public partial class MainWindow : Window
     {
         DeleteProfilePressed = true;
         _ = ButtonAnimator();
-        var name = ProfileNameTextBox2.Text.Trim();
+        string name = ProfileNameTextBox2.Text.Trim();
         if (string.IsNullOrWhiteSpace(name))
             return;
 
-        var btn = ProfilesPanel.Children
+        Button? btn = ProfilesPanel.Children
                                .OfType<Button>()
                                .FirstOrDefault(b =>
                                    string.Equals((string)b.Content, name, StringComparison.OrdinalIgnoreCase));
@@ -893,18 +895,21 @@ public partial class MainWindow : Window
     }
     private void ProfileButton(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button btn) return;
-        if (btn.Content is not string profileName) return;
-        var clicker = GetKliker(profileName);
-        if (clicker == null) return;
+        if (sender is not Button btn)
+            return;
+        if (btn.Content is not string profileName)
+            return;
+        ClickerConstruct? clicker = GetKliker(profileName);
+        if (clicker == null)
+            return;
 
         _currentlyEditing = profileName;
         EditingLabel.Content = $"Editing {profileName}";
         NProfileNameTextBox.Text = clicker.ClickerName;
-        var act = clicker.ActivationBind;
+        ClickBind act = clicker.ActivationBind;
         Bind.Text = act.IsKey ? act.Key.ToString() : act.Mouse.ToString();
         Temp_ActivationBind = act;
-        var act2 = clicker.ActionBind;
+        ClickBind act2 = clicker.ActionBind;
         BindClick.Text = act2.IsKey ? act2.Key.ToString() : act2.Mouse.ToString();
         Temp_ActionBind = act2;
         NHoldDurTextBox.Text = clicker.HoldDuration.ToString();
@@ -917,129 +922,94 @@ public partial class MainWindow : Window
         DebugNameLabel.Content = $"Name: {clicker.ClickerName}";
         DebugActivationLabel.Content = clicker.ActivationBind.IsKey ? clicker.ActivationBind.Key.ToString() : clicker.ActivationBind.Mouse.ToString();
         DebugActionLabel.Content = clicker.ActionBind.IsKey ? clicker.ActionBind.Key.ToString() : clicker.ActionBind.Mouse.ToString();
-        DebugHoldDurLabel.Content = $"HoldDuration: {clicker.HoldDuration.ToString()}";
-        DebugDelayLabel.Content = $"Delay: {clicker.Delay.ToString()}";
-        DebugMaxDelayLabel.Content = $"MaxDelay: {clicker.MaxDelay.ToString()}";
-        DebugBurstCountLabel.Content = $"BurstCount: {clicker.BurstCount.ToString()}";
-        DebugHoldModeLabel.Content = $"HoldMode: {clicker.HoldMode.ToString()}";
-        DebugToggleModeLabel.Content = $"ToggleMode: {clicker.ToggleMode.ToString()}";
-        DebugBurstModeLabel.Content = $"BurstMode: {clicker.BurstMode.ToString()}";
-        DebugThreadLabel.Content = $"Profile is on CPU Thread #{clicker.ThreadId.ToString()}";
+        DebugHoldDurLabel.Content = $"HoldDuration: {clicker.HoldDuration}";
+        DebugDelayLabel.Content = $"Delay: {clicker.Delay}";
+        DebugMaxDelayLabel.Content = $"MaxDelay: {clicker.MaxDelay}";
+        DebugBurstCountLabel.Content = $"BurstCount: {clicker.BurstCount}";
+        DebugHoldModeLabel.Content = $"HoldMode: {clicker.HoldMode}";
+        DebugToggleModeLabel.Content = $"ToggleMode: {clicker.ToggleMode}";
+        DebugBurstModeLabel.Content = $"BurstMode: {clicker.BurstMode}";
+        DebugThreadLabel.Content = $"Profile is on CPU Thread #{clicker.ThreadId}";
         _originalSnapshot = new KlikerSnapshot(clicker.ClickerName, clicker.ActivationBind, clicker.ActionBind, clicker.HoldDuration, clicker.Delay, clicker.MaxDelay, clicker.BurstCount, clicker.HoldMode, clicker.ToggleMode, clicker.BurstMode);
 
         ToProfilePanel(sender, e);
     }
-    internal bool HasUnsavedChanges()
-    {
-        if (_originalSnapshot == null)
-            return false;
-        if (_originalSnapshot.Name != NProfileNameTextBox.Text.Trim())
-            return true;
-        if (!ClickBindEquals(_originalSnapshot.Activation, Temp_ActivationBind))
-            return true;
-        if (!ClickBindEquals(_originalSnapshot.Action, Temp_ActionBind))
-            return true;
-        if (_originalSnapshot.HoldDuration != ushort.Parse(NHoldDurTextBox.Text))
-            return true;
-        if (_originalSnapshot.Delay != ushort.Parse(NdelayTextBox.Text))
-            return true;
-        if (_originalSnapshot.MaxDelay != ushort.Parse(NMaxDelayTextBox.Text))
-            return true;
-        if (_originalSnapshot.BurstCount != ushort.Parse(NBurstCountTextBox.Text))
-            return true;
-        if (_originalSnapshot.HoldMode != (HTC.IsChecked == true))
-            return true;
-        if (_originalSnapshot.ToggleMode != (TTC.IsChecked == true))
-            return true;
-        if (_originalSnapshot.BurstMode != (PTB.IsChecked == true))
-            return true;
-
-        return false;
-    }
+    internal bool HasUnsavedChanges() => _originalSnapshot != null && (_originalSnapshot.Name != NProfileNameTextBox.Text.Trim() || !ClickBindEquals(_originalSnapshot.Activation, Temp_ActivationBind) || !ClickBindEquals(_originalSnapshot.Action, Temp_ActionBind) || _originalSnapshot.HoldDuration != ushort.Parse(NHoldDurTextBox.Text) || _originalSnapshot.Delay != ushort.Parse(NdelayTextBox.Text) || _originalSnapshot.MaxDelay != ushort.Parse(NMaxDelayTextBox.Text) || _originalSnapshot.BurstCount != ushort.Parse(NBurstCountTextBox.Text) || _originalSnapshot.HoldMode != (HTC.IsChecked == true) || _originalSnapshot.ToggleMode != (TTC.IsChecked == true) || _originalSnapshot.BurstMode != (PTB.IsChecked == true));
     internal async Task ButtonAnimator()
     {
-        if (SavePressed) 
-        { 
+        if (SavePressed)
+        {
             await AnimateBorder(SaveSettingsBorder);
             SavePressed = false;
         }
-        else if (LoadPressed) 
-        { 
+        else if (LoadPressed)
+        {
             await AnimateBorder(LoadSettingsBorder);
             LoadPressed = false;
         }
-        else if (ResetPressed) 
-        { 
+        else if (ResetPressed)
+        {
             await AnimateBorder(ResetSettingsBorder);
             ResetPressed = false;
         }
-        else if (InstallDriverPressed) 
-        { 
-            await AnimateBorder(InstallDriverBorder); 
-            InstallDriverPressed = false;
-        }
-        else if (UninstallDriverPressed) 
-        { 
-            await AnimateBorder(UninstallDriverBorder);
-            UninstallDriverPressed = false;
-        }
-        else if (DiscardChangesPressed) 
-        { 
+        else if (DiscardChangesPressed)
+        {
             await AnimateBorder(DiscardUnsavedChangesBorder);
             DiscardChangesPressed = false;
         }
-        else if (SaveChangesPressed) 
-        { 
+        else if (SaveChangesPressed)
+        {
             await AnimateBorder(SaveChangesBorder);
             SaveChangesPressed = false;
         }
-        else if (SaveUnsavedChangesPressed) 
-        { 
+        else if (SaveUnsavedChangesPressed)
+        {
             await AnimateBorder(SaveUnsavedChangesBorder);
             SaveUnsavedChangesPressed = false;
         }
-        else if (ClearAllPressed) 
-        { 
+        else if (ClearAllPressed)
+        {
             await AnimateBorder(ClearAllBorder);
             ClearAllPressed = false;
         }
-        else if (AddProfilePressed) 
-        { 
+        else if (AddProfilePressed)
+        {
             await AnimateBorder(CreateProfileBorder);
             AddProfilePressed = false;
         }
-        else if (DeleteProfilePressed) 
-        { 
+        else if (DeleteProfilePressed)
+        {
             await AnimateBorder(DeleteProfileBorder);
             DeleteProfilePressed = false;
         }
-        else if (CoinFlipPressed) 
-        { 
+        else if (CoinFlipPressed)
+        {
             await AnimateBorder(CoinFlipBorder);
             CoinFlipPressed = false;
         }
-        else if (GithubPressed) 
-        { 
+        else if (GithubPressed)
+        {
             await AnimateBorder(GoToRepoBorder);
             GithubPressed = false;
         }
-        else if (GoogleDocPressed) 
-        { 
+        else if (GoogleDocPressed)
+        {
             await AnimateBorder(GoToGoogleDocBorder);
             GoogleDocPressed = false;
         }
     }
     internal async Task AnimateBorder(Border border)
     {
-        if (_isAnimating) return;
+        if (_isAnimating)
+            return;
         _isAnimating = true;
         try
         {
             if (border == CoinFlipBorder)
             {
-                border.BorderThickness = new Thickness(2, 2, 4, 4);
+                border.BorderThickness = new Thickness(2, 2, 4, 3);
                 await Task.Delay(500);
-                border.BorderThickness = new Thickness(1, 1, 6, 6);
+                border.BorderThickness = new Thickness(1, 1, 6, 5);
             }
             else if (border == ClearAllBorder || border == CreateProfileBorder || border == DeleteProfileBorder)
             {
@@ -1049,9 +1019,9 @@ public partial class MainWindow : Window
             }
             else
             {
-                border.BorderThickness = new Thickness(2, 2, 4, 4);
+                border.BorderThickness = new Thickness(2, 2, 4, 3);
                 await Task.Delay(200);
-                border.BorderThickness = new Thickness(1, 1, 8, 8);
+                border.BorderThickness = new Thickness(1, 1, 7, 6);
             }
         }
         finally
@@ -1079,102 +1049,26 @@ public partial class MainWindow : Window
     {
         CoinFlipPressed = true;
         _ = ButtonAnimator();
-        if (!CoinReady) return;
+        if (!CoinReady)
+            return;
         CoinLabel.Content = "...";
         CoinReady = false;
         await Task.Delay(500);
-        var result = RandomGenerator.Next(2) == 0 ? "Heads" : "Tails";
+        string result = RandomGenerator.Next(2) == 0 ? "Heads" : "Tails";
         CoinLabel.Content = result;
         CoinReady = true;
-    }
-    private void ToggleLowLevelInput(object sender, RoutedEventArgs e)
-    {
-        if (!InputInterceptor.CheckDriverInstalled())
-        {
-            errborder.Background = Brushes.Red;
-            errlabel.Content = "Error, check log";
-            SendLogMessage("you must install the InputInterceptor driver before you can enable this option.");
-            return;
-        }
-        LowLevelInput = !LowLevelInput;
-        LowLevelInputCheckBorder.BorderThickness = LowLevelInput ? new Thickness(2, 2, 4, 4) : new Thickness(1, 1, 8, 8);
-        SendLogMessage($"Low-Level Input is now {(LowLevelInput ? "enabled" : "disabled")}");
-
-        UpdateProfiles();
     }
     private void ToggleUpdateChecking(object sender, RoutedEventArgs e)
     {
         AllowUpdates = !AllowUpdates;
-        AllowUpdateCheckingCheckBorder.BorderThickness = AllowUpdates ? new Thickness(2, 2, 4, 4) : new Thickness(1, 1, 8, 8);
+        AllowUpdateCheckingCheckBorder.BorderThickness = AllowUpdates ? new Thickness(2, 2, 4, 3) : new Thickness(1, 1, 7, 6);
         SendLogMessage($"Oki i {(AllowUpdates ? "will" : "wont")} check for updates");
     }
     private void ToggleCustomTitles(object sender, RoutedEventArgs e)
     {
         UseCustomTitles = !UseCustomTitles;
-        UseCustomTitlesCheckBorder.BorderThickness = UseCustomTitles ? new Thickness(2, 2, 4, 4) : new Thickness(1, 1, 8, 8);
+        UseCustomTitlesCheckBorder.BorderThickness = UseCustomTitles ? new Thickness(2, 2, 4, 3) : new Thickness(1, 1, 7, 6);
         SendLogMessage($"Okaaaa i {(UseCustomTitles ? "will" : "wont")} check for titles in the google doc");
-    }
-    private async void InstallDriver(object sender, RoutedEventArgs e)
-    {
-        InstallDriverPressed = true;
-        _ = ButtonAnimator();
-        if (InputInterceptor.CheckDriverInstalled())
-        {
-            errborder.Background = Brushes.Red;
-            errlabel.Content = "Error, check log";
-            SendLogMessage("Driver is already installed!!1");
-            await Task.Delay(2500);
-            errborder.Background = Brushes.White;
-            errlabel.Content = "...";
-        }
-        else if (!InputInterceptor.CheckAdministratorRights())
-        {
-            errborder.Background = Brushes.Red;
-            errlabel.Content = "Error, check log";
-            SendLogMessage("To install the Driver you need to run the app in administrator :c");
-            SendLogMessage("i know scary, but is optional!!");
-            await Task.Delay(2500);
-            errborder.Background = Brushes.White;
-            errlabel.Content = "...";
-        }
-        else if (InputInterceptor.CheckAdministratorRights() && !InputInterceptor.CheckDriverInstalled())
-        {
-            InterceptorInputSender.InstallDriver();
-            errborder.Background = Brushes.Green;
-            errlabel.Content = "Check Log";
-            SendLogMessage("The driver was installed, to finish the installation you need to restart your computer.");
-        }
-    }
-    private async void UninstallDriver(object sender, RoutedEventArgs e)
-    {
-        UninstallDriverPressed = true;
-        _ = ButtonAnimator();
-        if (!InputInterceptor.CheckAdministratorRights())
-        {
-            errborder.Background = Brushes.Red;
-            errlabel.Content = "Error, check log";
-            SendLogMessage("To Uninstall the Driver you need to run the app in administrator :c");
-            SendLogMessage("i know scary, but is optional!!");
-            await Task.Delay(2500);
-            errborder.Background = Brushes.White;
-            errlabel.Content = "...";
-        }
-        if (!InputInterceptor.CheckDriverInstalled())
-        {
-            errborder.Background = Brushes.Red;
-            errlabel.Content = "Error, check log";
-            SendLogMessage("driver no installed already :3");
-            await Task.Delay(2500);
-            errborder.Background = Brushes.White;
-            errlabel.Content = "...";
-        }
-        if (InputInterceptor.CheckAdministratorRights() && InputInterceptor.CheckDriverInstalled())
-        {
-            InterceptorInputSender.UninstallDriver();
-            errborder.Background = Brushes.Green;
-            errlabel.Content = "Check Log";
-            SendLogMessage("The driver was uninstalled, to finish the uninstallation you need to restart your computer.");
-        }
     }
     private void UnsavedSave(object sender, RoutedEventArgs e)
     {
@@ -1208,12 +1102,11 @@ public partial class MainWindow : Window
         UnsavedChangesBorder.Visibility = Visibility.Collapsed;
         ToKlikerPanelY(sender, e);
     }
-
     private void GoToGoogleDoc(object sender, RoutedEventArgs e)
     {
         try
         {
-            Process.Start(new ProcessStartInfo
+            _ = Process.Start(new ProcessStartInfo
             {
                 FileName = "https://docs.google.com/document/d/1wtMBiTUCG-tkKZLOrKfAzlp2NkPbEyrz6Jtmb8w-Hhg",
                 UseShellExecute = true
@@ -1224,12 +1117,11 @@ public partial class MainWindow : Window
             SendLogMessage($"Failed to open google doc: {ex.Message}");
         }
     }
-
     private void GoToRepo(object sender, RoutedEventArgs e)
     {
         try
         {
-            Process.Start(new ProcessStartInfo
+            _ = Process.Start(new ProcessStartInfo
             {
                 FileName = "https://github.com/Iris-Belle/Iris-Auto-Cliker",
                 UseShellExecute = true
@@ -1240,24 +1132,24 @@ public partial class MainWindow : Window
             SendLogMessage($"Failed to open github repo: {ex.Message}");
         }
     }
-
-    private async void CheckDriver(object sender, RoutedEventArgs e)
+    private void DisablePowerThrottling()
     {
-        if (InputInterceptor.CheckDriverInstalled())
+        try
         {
-            errborder.Background = Brushes.Green;
-            errlabel.Content = "Installed";
-            await Task.Delay(2500);
-            errborder.Background = Brushes.White;
-            errlabel.Content = "...";
+            PROCESS_POWER_THROTTLING_STATE state = new()
+            {
+                Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION,
+                ControlMask = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION,
+                StateMask = 0
+            };
+
+            IntPtr pState = Marshal.AllocHGlobal(Marshal.SizeOf(state));
+            Marshal.StructureToPtr(state, pState, false);
+
+            _ = SetProcessInformation(GetCurrentProcess(), ProcessInformationClass.ProcessPowerThrottling, pState, (uint)Marshal.SizeOf(state));
+
+            Marshal.FreeHGlobal(pState);
         }
-        else
-        {
-            errborder.Background = Brushes.Red;
-            errlabel.Content = "Not Installed";
-            await Task.Delay(2500);
-            errborder.Background = Brushes.White;
-            errlabel.Content = "...";
-        }
+        catch { }
     }
 }

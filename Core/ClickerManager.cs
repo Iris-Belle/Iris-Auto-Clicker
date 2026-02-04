@@ -23,7 +23,7 @@ internal static class ClickerManager
             return;
         }
 
-        var clicker = new ClickerConstruct(
+        ClickerConstruct clicker = new(
             name,
             activationBind,
             actionBind,
@@ -36,9 +36,10 @@ internal static class ClickerManager
             burstMode);
 
         klikers[name] = clicker;
-        var thread = new Thread(clicker.ThreadExecute)
+        Thread thread = new(clicker.ThreadExecute)
         {
-            IsBackground = true
+            IsBackground = false,
+            Priority = ThreadPriority.Highest
         };
         klikerThreads[name] = thread;
         thread.Start();
@@ -67,16 +68,14 @@ internal static class ClickerManager
         bool burstMode
     )
     {
-        if (!klikers.TryGetValue(name, out var existing))
+        if (!klikers.TryGetValue(name, out ClickerConstruct? existing))
             return false;
 
-
-
         existing.ShouldStop = true;
-        if (klikerThreads.TryGetValue(name, out var oldThread))
+        if (klikerThreads.TryGetValue(name, out Thread? oldThread))
         {
             oldThread.Join();
-            klikerThreads.Remove(name);
+            _ = klikerThreads.Remove(name);
         }
         existing.ShouldStop = false;
         existing.WasButtonPressed = false;
@@ -90,7 +89,11 @@ internal static class ClickerManager
         existing.ToggleMode = toggleMode;
         existing.BurstMode = burstMode;
         existing.RecalculateCaches();
-        var thread = new Thread(existing.ThreadExecute) { IsBackground = true };
+        Thread thread = new(existing.ThreadExecute)
+        {
+            IsBackground = false,
+            Priority = ThreadPriority.Highest
+        };
         klikerThreads[name] = thread;
         thread.Start();
         SendLogMessage($"Kliker profile '{name}' updated successfully.");
@@ -99,31 +102,31 @@ internal static class ClickerManager
 
     internal static void DeleteKliker(string name)
     {
-        if (!klikers.TryGetValue(name, out var clicker))
+        if (!klikers.TryGetValue(name, out ClickerConstruct? clicker))
         {
             SendLogMessage($"Kliker profile '{name}' not found."); //NOOOOOOOOOOO
             return;
         }
 
         clicker.ShouldStop = true;
-        if (klikerThreads.TryGetValue(name, out var thread))
+        if (klikerThreads.TryGetValue(name, out Thread? thread))
         {
             thread.Join();
-            klikerThreads.Remove(name);
+            _ = klikerThreads.Remove(name);
         }
-        klikers.Remove(name);
+        _ = klikers.Remove(name);
         if (!Replacing && !Loading)
             SendLogMessage($"Kliker profile '{name}' deleted."); //sob sob
     }
 
     internal static ClickerConstruct? GetKliker(string name)
-=> klikers.TryGetValue(name, out var value) ? value : null;
+=> klikers.TryGetValue(name, out ClickerConstruct? value) ? value : null;
 
     internal static IEnumerable<ClickerConstruct> GetAllKlikers() => klikers.Values;
     internal static void ClearAll()
     {
         Loading = true;
-        foreach (var clicker in klikers.Values)
+        foreach (ClickerConstruct clicker in klikers.Values)
             clicker.ShouldStop = true;
         klikers.Clear();
         klikerThreads.Clear();

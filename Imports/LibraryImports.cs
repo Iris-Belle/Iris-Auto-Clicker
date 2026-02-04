@@ -11,10 +11,14 @@ internal static partial class LibraryImports
     [DllImport("winmm.dll")]
     internal static extern uint timeBeginPeriod(uint ms);
 
-
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern uint MapVirtualKey(uint uCode, uint uMapType);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool SetProcessInformation(IntPtr hProcess, ProcessInformationClass ProcessInformationClass, IntPtr ProcessInformation, uint ProcessInformationSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern IntPtr GetCurrentProcess();
 
     internal const uint MAPVK_VK_TO_VSC = 0;
 
@@ -23,6 +27,9 @@ internal static partial class LibraryImports
     internal const int RIM_TYPEMOUSE = 0;
     internal const int WM_INPUT = 0x00FF;
     internal const int WM_MOUSEHWHEEL = 0x020E;
+
+    internal const uint PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION = 0x4;
+    internal const uint PROCESS_POWER_THROTTLING_CURRENT_VERSION = 1;
 
     [DllImport("user32.dll")]
     internal static extern bool RegisterRawInputDevices(RAWINPUTDEVICE[] pRawInputDevices, uint uiNumDevices, uint cbSize);
@@ -45,6 +52,19 @@ internal static partial class LibraryImports
 
     [DllImport("user32.dll")]
     internal static extern IntPtr GetKeyboardLayout(uint idThread);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct PROCESS_POWER_THROTTLING_STATE
+    {
+        internal uint Version;
+        internal uint ControlMask;
+        internal uint StateMask;
+    }
+
+    internal enum ProcessInformationClass
+    {
+        ProcessPowerThrottling = 4
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct RAWINPUTDEVICE

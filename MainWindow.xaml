@@ -73,7 +73,7 @@
                 </Button>
                 <Label 
                     x:Name="VersionLabel"
-                    Content="IAC4 0.0.2" 
+                    Content="IAC4 0.0.3" 
                     HorizontalAlignment="Right" 
                     VerticalAlignment="Top" 
                     Height="27" 
@@ -213,7 +213,7 @@
                     CornerRadius="8,8,8,8" 
                     Background="White" 
                     Cursor="Hand" 
-                    BorderThickness="1,1,8,8" 
+                    BorderThickness="1,1,7,6" 
                     BorderBrush="#FF322E31">
                     <Button 
                         Click="ResetSettings"
@@ -244,7 +244,7 @@
                     CornerRadius="8,8,8,8" 
                     Background="White"
                     Cursor="Hand" 
-                    BorderThickness="1,1,8,8" 
+                    BorderThickness="1,1,7,6" 
                     BorderBrush="#FF322E31">
                     <Button 
                         Click="LoadSettingsbtn"
@@ -275,7 +275,7 @@
                     CornerRadius="8" 
                     Background="White"
                     Cursor="Hand" 
-                    BorderThickness="1,1,8,8" 
+                    BorderThickness="1,1,7,6" 
                     BorderBrush="#FF322E31">
                     <Button
                         Click="SaveSettingsbtn"
@@ -295,115 +295,6 @@
                 </Border>
 
                 <Border 
-                    x:Name="InstallDriverBorder"
-                    Margin="0,10,170,0" 
-                    Opacity="0.75" 
-                    Width="150" 
-                    Height="50" 
-                    HorizontalAlignment="Right" 
-                    VerticalAlignment="Top" 
-                    CornerRadius="8" 
-                    Background="White"
-                    Cursor="Hand" BorderThickness="1,1,8,8" BorderBrush="#FF322E31">
-                    <Button
-                        Click="InstallDriver"
-                        Content="INSTALL DRIVER"
-                        FontFamily="Consolas"
-                        FontWeight="Bold"
-                        FontSize="16"
-                        Cursor="Hand"
-                        Height="50"
-                        Width="150"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Background="Transparent" 
-                        Foreground="Black" FontStyle="Italic">
-                    </Button>
-                </Border>
-
-                <Border 
-                    x:Name="UninstallDriverBorder"
-                    Margin="0,70,170,0" 
-                    Opacity="0.75" 
-                    Width="150" 
-                    Height="50" 
-                    HorizontalAlignment="Right" 
-                    VerticalAlignment="Top" 
-                    CornerRadius="8" 
-                    Background="White"
-                    Cursor="Hand" BorderThickness="1,1,8,8" BorderBrush="#FF322E31">
-                    <Button
-                        Click="UninstallDriver"
-                        Content="UNINSTALL DRIVER"
-                        FontFamily="Consolas"
-                        FontWeight="Bold"
-                        FontSize="14"
-                        Cursor="Hand"
-                        Height="50"
-                        Width="150"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Background="Transparent" 
-                        Foreground="Black" FontStyle="Italic">
-                    </Button>
-                </Border>
-
-                <Border 
-                    x:Name="errborder"
-                    Margin="0,70,10,0" 
-                    Opacity="0.75" 
-                    Width="150" 
-                    Height="50" 
-                    HorizontalAlignment="Right" 
-                    VerticalAlignment="Top" 
-                    CornerRadius="8" 
-                    Background="White"
-                    Cursor="Hand">
-                    <Label 
-                        x:Name="errlabel"
-                        Content="..."
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        FontFamily="Consolas" 
-                        FontSize="16" 
-                        FontWeight="Bold"/>
-                </Border>
-
-                <Border 
-                    x:Name="LowLevelInputCheckBorder"
-                    Opacity="0.75" 
-                    Width="150" 
-                    Height="50" 
-                    HorizontalAlignment="Right" 
-                    VerticalAlignment="Top" 
-                    CornerRadius="8" 
-                    Background="White"
-                    Margin="0,10,10,0" BorderThickness="1,1,8,8" BorderBrush="#FF322E31">
-                    <Button 
-                        Content="LOW LEVEL INPUT" 
-                        ToolTip="attemps to send inputs in a lower level maybe bypassing some anti auto clickers?"
-                        HorizontalAlignment="Center" 
-                        VerticalAlignment="Center" 
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Height="41" 
-                        Width="142" 
-                        Cursor="Hand"
-                        Click="ToggleLowLevelInput" 
-                        FontFamily="Consolas" 
-                        FontSize="16" 
-                        FontWeight="Bold"
-                        Background="Transparent" 
-                        Foreground="Black" FontStyle="Italic">
-                    </Button>
-
-                </Border>
-
-                <Border 
                     x:Name="AllowUpdateCheckingCheckBorder"
                     Opacity="0.75" 
                     Width="150" 
@@ -413,7 +304,7 @@
                     CornerRadius="8" 
                     Background="White" 
                     Margin="10,120,0,0" 
-                    BorderThickness="1,1,8,8" 
+                    BorderThickness="1,1,7,6" 
                     BorderBrush="#FF322E31">
                     <Button 
                         Content="ALLOW UPDATE CHECKING" 
@@ -446,7 +337,7 @@
                     CornerRadius="8" 
                     Background="White" 
                     Margin="10,175,0,0" 
-                    BorderThickness="1,1,8,8" 
+                    BorderThickness="1,1,7,6" 
                     BorderBrush="#FF322E31">
 
                     <Button 
@@ -479,7 +370,7 @@
                     VerticalAlignment="Bottom" 
                     CornerRadius="8" 
                     Background="White" 
-                    BorderThickness="1,1,8,8" 
+                    BorderThickness="1,1,7,6" 
                     BorderBrush="#FF322E31" Margin="0,0,10,10">
                     <Button 
                         Content="GITHUB" 
@@ -511,7 +402,7 @@
                     VerticalAlignment="Bottom" 
                     CornerRadius="8" 
                     Background="White" 
-                    BorderThickness="1,1,8,8" 
+                    BorderThickness="1,1,7,6" 
                     BorderBrush="#FF322E31" Margin="0,0,10,65">
 
                     <Button 
@@ -534,31 +425,6 @@
                     </Button>
 
                 </Border>
-                
-                <Button 
-                    x:Name="checkdriver"
-                    Content="" 
-                    ToolTip="Click to check if driver is installed"
-                    HorizontalAlignment="Right" 
-                    VerticalAlignment="Top" 
-                    HorizontalContentAlignment="Center"
-                    VerticalContentAlignment="Center"
-                    Height="50" 
-                    Width="150" 
-                    Cursor="Hand"
-                    Click="CheckDriver" 
-                    FontFamily="Consolas" 
-                    FontSize="16" 
-                    FontWeight="Bold" 
-                    Margin="0,70,10,0"
-                    Background="Transparent" 
-                    Foreground="Black">
-                </Button>
-
-
-
-
-
 
             </Grid>
 
@@ -1259,7 +1125,7 @@
                 Background="#e6e5d3" 
                 CornerRadius="8,8,8,8" 
                 Grid.ColumnSpan="2" 
-                BorderThickness="1,1,8,8">
+                BorderThickness="1,1,7,6">
                 <Button 
                     Content="SAVE CHANGES" 
                     Width="245" 
