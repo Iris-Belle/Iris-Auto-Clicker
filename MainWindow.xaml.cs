@@ -1123,7 +1123,7 @@ public partial class MainWindow : Window
         {
             _ = Process.Start(new ProcessStartInfo
             {
-                FileName = "https://github.com/Iris-Belle/Iris-Auto-Cliker",
+                FileName = "https://github.com/Iris-Belle/Iris-Auto-Clicker",
                 UseShellExecute = true
             });
         }
